@@ -23,19 +23,19 @@ extern void mandelbrotSerial(
     int maxIterations,
     int output[]);
 
+//
+// workerThreadStart --
+// Interleaved row-cyclic decomposition for optimal dynamic load balancing
+//
 void workerThreadStart(WorkerArgs * const args) {
     double startTime = CycleTimer::currentSeconds();
 
-    int totalRows = args->height / args->numThreads;
-    int startRow = args->threadId * totalRows;
-    if (args->threadId == args->numThreads - 1) {
-        totalRows = args->height - startRow;
+    for (unsigned int r = args->threadId; r < args->height; r += args->numThreads) {
+        mandelbrotSerial(args->x0, args->y0, args->x1, args->y1,
+                         args->width, args->height,
+                         r, 1,
+                         args->maxIterations, args->output);
     }
-
-    mandelbrotSerial(args->x0, args->y0, args->x1, args->y1,
-                     args->width, args->height,
-                     startRow, totalRows,
-                     args->maxIterations, args->output);
 
     double endTime = CycleTimer::currentSeconds();
     args->elapsedTime = endTime - startTime;
