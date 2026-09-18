@@ -1,0 +1,184 @@
+commit 09cfff5c874490b6dcd592a1de4059dae9c62066
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Fri Sep 18 13:30:15 2026 +0500
+
+    Final submission with writeup.pdf and k-means plots
+
+ generate_pdf_report.py | 449 +++++++++++++++++++++++++++++++++++++++++++++++++
+ gitlog.txt             | 184 ++++++++++++++++++++
+ plots/end.png          | Bin 0 -> 182975 bytes
+ plots/start.png        | Bin 0 -> 327964 bytes
+ writeup.pdf            | 218 ++++++++++++++++++++++++
+ 5 files changed, 851 insertions(+)
+
+commit 757831eb5c62082d7e4d5d58d6d7c2cdd7d65af5
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Fri Sep 18 12:25:40 2026 +0500
+
+    prog6: parallelize cluster assignments, centroids, and costs using std::thread
+
+ prog6_kmeans/kmeansThread.cpp | 212 +++++++++++++++++++++++++-----------------
+ 1 file changed, 127 insertions(+), 85 deletions(-)
+
+commit 35a8060324ab959fcb3ae458d435e708cda64896
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Fri Sep 18 11:10:25 2026 +0500
+
+    prog6: revert computeCost-only parallelization due to insufficient speedup (f=0.20 bottleneck)
+
+ prog6_kmeans/kmeansThread.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 1ac183581a1a6e9d8f9fccb12c7622e80470066b
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Fri Sep 18 09:45:10 2026 +0500
+
+    prog6: attempt parallelizing computeCost only with std::thread
+
+ prog6_kmeans/kmeansThread.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit 3f54cd1a0a6450bd2fd75d28c041741addc88fec
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Thu Sep 17 18:20:00 2026 +0500
+
+    prog6: instrument serial k-means with CycleTimer to quantify hotspot fraction f
+
+ prog6_kmeans/kmeansThread.cpp | 114 +++++++++---------------------------------
+ 1 file changed, 23 insertions(+), 91 deletions(-)
+
+commit b153f9d769ac786859e3ec9a852829bd51f46c3b
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Thu Sep 17 16:45:15 2026 +0500
+
+    prog5: enable detailed serial timing and memory bandwidth metrics
+
+ prog5_saxpy/main.cpp | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+commit 56477256172cc396436d3dae25718871ab4da116
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Thu Sep 17 14:30:50 2026 +0500
+
+    prog4: construct best-case and worst-case SIMD divergence inputs
+
+ prog4_sqrt/main.cpp | 109 +++++++++++++++++++++++++++++++++-------------------
+ 1 file changed, 69 insertions(+), 40 deletions(-)
+
+commit d54fb3a7683833d7101f3a1acb19e061dd6f6a80
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Thu Sep 17 11:15:20 2026 +0500
+
+    prog3: configure fine-grained tasking in mandelbrot.ispc for multicore scaling
+
+ prog3_mandelbrot_ispc/mandelbrot.ispc | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
+
+commit 31e599c68ad75930a80924cfbee41f8f6cb0cd22
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Wed Sep 16 17:40:12 2026 +0500
+
+    prog2: support configurable VECTOR_WIDTH at compile-time for utilization sweeps
+
+ prog2_vecintrin/CS149intrin.h | 3 ++-
+ prog2_vecintrin/Makefile      | 6 +++---
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+commit 16d3a52f4ce743e8b656e0e92ea610b0c8f5bd17
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Wed Sep 16 16:15:30 2026 +0500
+
+    prog2: implement clampedExpVector and arraySumVector with SIMD intrinsics
+
+ prog2_vecintrin/main.cpp | 69 +++++++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 54 insertions(+), 15 deletions(-)
+
+commit 40d2fe698f887387cc655dbc7f7a486fe0a2774a
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Wed Sep 16 14:20:45 2026 +0500
+
+    Row-cyclic decomposition fixes thread 3 imbalance
+
+ prog1_mandelbrot_threads/mandelbrotThread.cpp | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
+
+commit 8834a50b0a793b384d5e21d74350ec65bab82ce6
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Wed Sep 16 10:35:10 2026 +0500
+
+    prog1: instrument per-thread timings to quantify load imbalance with block decomposition
+
+ prog1_mandelbrot_threads/mandelbrotThread.cpp | 53 +++++++++++----------------
+ 1 file changed, 22 insertions(+), 31 deletions(-)
+
+commit aa5fc9a4169bb5a12ba7d6eda2198950c7a966fb
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Tue Sep 15 15:10:48 2026 +0500
+
+    Fix missing cstring and cstdlib headers for GCC 13+
+
+ prog1_mandelbrot_threads/main.cpp             | 1 +
+ prog1_mandelbrot_threads/mandelbrotThread.cpp | 1 +
+ 2 files changed, 2 insertions(+)
+
+commit 1a54d69abbf4bfa0608574f9737a608e2c2ad0fd
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Tue Sep 15 13:45:30 2026 +0500
+
+    Add generate_data.py for local deterministic k-means dataset generation
+
+ prog6_kmeans/generate_data.py | 149 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 149 insertions(+)
+
+commit 797d4e3c2ca2b9dff10de06d59d33f8c2c031076
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Tue Sep 15 11:22:15 2026 +0500
+
+    Add gitignore for build output and dataset
+
+ .gitignore | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+commit 0525383178274bb3182d72846146135dd5af2734
+Author: Sachal <23L-0973@lhr.nu.edu.pk>
+Date:   Tue Sep 15 10:14:22 2026 +0500
+
+    Initial commit: unmodified CS149 starter code
+
+ README.md                                     |  435 +++++++++
+ README_aarch64.md                             |  408 ++++++++
+ common/CycleTimer.h                           |   27 +
+ common/ppm.cpp                                |   35 +
+ common/tasksys.cpp                            | 1246 +++++++++++++++++++++++++
+ handout-images/kmeans.jpg                     |  Bin 0 -> 574329 bytes
+ handout-images/mandelbrot_viz.jpg             |  Bin 0 -> 64877 bytes
+ handout-images/sqrt_graph.jpg                 |  Bin 0 -> 59297 bytes
+ prog1_mandelbrot_threads/Makefile             |   35 +
+ prog1_mandelbrot_threads/main.cpp             |  174 ++++
+ prog1_mandelbrot_threads/mandelbrotSerial.cpp |   92 ++
+ prog1_mandelbrot_threads/mandelbrotThread.cpp |   96 ++
+ prog2_vecintrin/CS149intrin.cpp               |  261 ++++++
+ prog2_vecintrin/CS149intrin.h                 |  126 +++
+ prog2_vecintrin/Makefile                      |   13 +
+ prog2_vecintrin/logger.cpp                    |   46 +
+ prog2_vecintrin/logger.h                      |   35 +
+ prog2_vecintrin/main.cpp                      |  280 ++++++
+ prog3_mandelbrot_ispc/Makefile                |   44 +
+ prog3_mandelbrot_ispc/main.cpp                |  211 +++++
+ prog3_mandelbrot_ispc/mandelbrot.ispc         |   79 ++
+ prog3_mandelbrot_ispc/mandelbrotSerial.cpp    |   92 ++
+ prog4_sqrt/Makefile                           |   44 +
+ prog4_sqrt/main.cpp                           |  103 ++
+ prog4_sqrt/sqrt.ispc                          |   62 ++
+ prog4_sqrt/sqrtSerial.cpp                     |   29 +
+ prog5_saxpy/Makefile                          |   40 +
+ prog5_saxpy/main.cpp                          |  120 +++
+ prog5_saxpy/saxpy.ispc                        |   39 +
+ prog5_saxpy/saxpySerial.cpp                   |   13 +
+ prog6_kmeans/Makefile                         |   37 +
+ prog6_kmeans/kmeansThread.cpp                 |  219 +++++
+ prog6_kmeans/main.cpp                         |  150 +++
+ prog6_kmeans/plot.py                          |   54 ++
+ prog6_kmeans/requirements.txt                 |    3 +
+ prog6_kmeans/utils.cpp                        |   88 ++
+ 36 files changed, 4736 insertions(+)
