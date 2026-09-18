@@ -3,19 +3,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <thread>
+#include <vector>
 
 #include "CycleTimer.h"
 
 using namespace std;
 
-typedef struct {
-  int start, end;
-  double *data;
-  double *clusterCentroids;
-  int *clusterAssignments;
-  double *currCost;
-  int M, N, K;
-} WorkerArgs;
+// Number of worker threads matching hardware thread count T = 8
+static const int NUM_THREADS = 8;
 
 static bool stoppingConditionMet(double *prevCost, double *currCost,
                                  double epsilon, int K) {
@@ -29,122 +24,169 @@ static bool stoppingConditionMet(double *prevCost, double *currCost,
 double dist(double *x, double *y, int nDim) {
   double accum = 0.0;
   for (int i = 0; i < nDim; i++) {
-    accum += pow((x[i] - y[i]), 2);
+    double diff = x[i] - y[i];
+    accum += diff * diff;
   }
   return sqrt(accum);
 }
 
-void computeAssignments(WorkerArgs *const args) {
-  double *minDist = new double[args->M];
-  for (int m = 0; m < args->M; m++) {
-    minDist[m] = 1e30;
-    args->clusterAssignments[m] = -1;
+void computeAssignmentsParallel(double *data, double *clusterCentroids,
+                                int *clusterAssignments, int M, int N, int K,
+                                int numThreads) {
+  std::vector<std::thread> workers;
+  int chunkSize = (M + numThreads - 1) / numThreads;
+
+  for (int t = 0; t < numThreads; t++) {
+    int start = t * chunkSize;
+    int end = std::min(start + chunkSize, M);
+    if (start >= end) break;
+
+    workers.emplace_back([=]() {
+      for (int m = start; m < end; m++) {
+        double minDist = 1e30;
+        int bestAssignment = -1;
+        const double *point = &data[m * N];
+
+        for (int k = 0; k < K; k++) {
+          const double *centroid = &clusterCentroids[k * N];
+          double accum = 0.0;
+          for (int i = 0; i < N; i++) {
+            double diff = point[i] - centroid[i];
+            accum += diff * diff;
+          }
+          if (accum < minDist) {
+            minDist = accum;
+            bestAssignment = k;
+          }
+        }
+        clusterAssignments[m] = bestAssignment;
+      }
+    });
   }
-  for (int k = args->start; k < args->end; k++) {
-    for (int m = 0; m < args->M; m++) {
-      double d = dist(&args->data[m * args->N],
-                      &args->clusterCentroids[k * args->N], args->N);
-      if (d < minDist[m]) {
-        minDist[m] = d;
-        args->clusterAssignments[m] = k;
+
+  for (auto &w : workers) {
+    w.join();
+  }
+}
+
+void computeCentroidsParallel(double *data, double *clusterCentroids,
+                              int *clusterAssignments, int M, int N, int K,
+                              int numThreads) {
+  std::vector<std::thread> workers;
+  std::vector<std::vector<double>> localCentroids(numThreads, std::vector<double>(K * N, 0.0));
+  std::vector<std::vector<int>> localCounts(numThreads, std::vector<int>(K, 0));
+  int chunkSize = (M + numThreads - 1) / numThreads;
+
+  for (int t = 0; t < numThreads; t++) {
+    int start = t * chunkSize;
+    int end = std::min(start + chunkSize, M);
+    if (start >= end) break;
+
+    workers.emplace_back([=, &localCentroids, &localCounts]() {
+      for (int m = start; m < end; m++) {
+        int k = clusterAssignments[m];
+        const double *point = &data[m * N];
+        double *myCentroid = &localCentroids[t][k * N];
+        for (int n = 0; n < N; n++) {
+          myCentroid[n] += point[n];
+        }
+        localCounts[t][k]++;
+      }
+    });
+  }
+
+  for (auto &w : workers) {
+    w.join();
+  }
+
+  std::vector<int> totalCounts(K, 0);
+  for (int k = 0; k < K; k++) {
+    for (int n = 0; n < N; n++) {
+      clusterCentroids[k * N + n] = 0.0;
+    }
+  }
+
+  for (int t = 0; t < numThreads; t++) {
+    for (int k = 0; k < K; k++) {
+      totalCounts[k] += localCounts[t][k];
+      for (int n = 0; n < N; n++) {
+        clusterCentroids[k * N + n] += localCentroids[t][k * N + n];
       }
     }
   }
-  delete[] minDist;
+
+  for (int k = 0; k < K; k++) {
+    int count = std::max(totalCounts[k], 1);
+    for (int n = 0; n < N; n++) {
+      clusterCentroids[k * N + n] /= count;
+    }
+  }
 }
 
-void computeCentroids(WorkerArgs *const args) {
-  int *counts = new int[args->K];
-  for (int k = 0; k < args->K; k++) {
-    counts[k] = 0;
-    for (int n = 0; n < args->N; n++) {
-      args->clusterCentroids[k * args->N + n] = 0.0;
-    }
-  }
-  for (int m = 0; m < args->M; m++) {
-    int k = args->clusterAssignments[m];
-    for (int n = 0; n < args->N; n++) {
-      args->clusterCentroids[k * args->N + n] += args->data[m * args->N + n];
-    }
-    counts[k]++;
-  }
-  for (int k = 0; k < args->K; k++) {
-    counts[k] = max(counts[k], 1);
-    for (int n = 0; n < args->N; n++) {
-      args->clusterCentroids[k * args->N + n] /= counts[k];
-    }
-  }
-  delete[] counts;
-}
+void computeCostParallel(double *data, double *clusterCentroids,
+                         int *clusterAssignments, double *currCost,
+                         int M, int N, int K, int numThreads) {
+  std::vector<std::thread> workers;
+  std::vector<std::vector<double>> localCosts(numThreads, std::vector<double>(K, 0.0));
+  int chunkSize = (M + numThreads - 1) / numThreads;
 
-void computeCost(WorkerArgs *const args) {
-  double *accum = new double[args->K];
-  for (int k = 0; k < args->K; k++) {
-    accum[k] = 0.0;
+  for (int t = 0; t < numThreads; t++) {
+    int start = t * chunkSize;
+    int end = std::min(start + chunkSize, M);
+    if (start >= end) break;
+
+    workers.emplace_back([=, &localCosts]() {
+      for (int m = start; m < end; m++) {
+        int k = clusterAssignments[m];
+        const double *point = &data[m * N];
+        const double *centroid = &clusterCentroids[k * N];
+        double accum = 0.0;
+        for (int i = 0; i < N; i++) {
+          double diff = point[i] - centroid[i];
+          accum += diff * diff;
+        }
+        localCosts[t][k] += sqrt(accum);
+      }
+    });
   }
-  for (int m = 0; m < args->M; m++) {
-    int k = args->clusterAssignments[m];
-    accum[k] += dist(&args->data[m * args->N],
-                     &args->clusterCentroids[k * args->N], args->N);
+
+  for (auto &w : workers) {
+    w.join();
   }
-  for (int k = args->start; k < args->end; k++) {
-    args->currCost[k] = accum[k];
+
+  for (int k = 0; k < K; k++) {
+    currCost[k] = 0.0;
+    for (int t = 0; t < numThreads; t++) {
+      currCost[k] += localCosts[t][k];
+    }
   }
-  delete[] accum;
 }
 
 void kMeansThread(double *data, double *clusterCentroids, int *clusterAssignments,
                   int M, int N, int K, double epsilon) {
+
   double *prevCost = new double[K];
   double *currCost = new double[K];
-
-  WorkerArgs args;
-  args.data = data;
-  args.clusterCentroids = clusterCentroids;
-  args.clusterAssignments = clusterAssignments;
-  args.currCost = currCost;
-  args.M = M;
-  args.N = N;
-  args.K = K;
 
   for (int k = 0; k < K; k++) {
     prevCost[k] = 1e30;
     currCost[k] = 0.0;
   }
 
-  double totalAssignmentsTime = 0.0;
-  double totalCentroidsTime = 0.0;
-  double totalCostTime = 0.0;
-
   int iter = 0;
   while (!stoppingConditionMet(prevCost, currCost, epsilon, K)) {
     for (int k = 0; k < K; k++) {
       prevCost[k] = currCost[k];
     }
-    args.start = 0;
-    args.end = K;
 
-    double t0 = CycleTimer::currentSeconds();
-    computeAssignments(&args);
-    double t1 = CycleTimer::currentSeconds();
-    computeCentroids(&args);
-    double t2 = CycleTimer::currentSeconds();
-    computeCost(&args);
-    double t3 = CycleTimer::currentSeconds();
+    computeAssignmentsParallel(data, clusterCentroids, clusterAssignments, M, N, K, NUM_THREADS);
+    computeCentroidsParallel(data, clusterCentroids, clusterAssignments, M, N, K, NUM_THREADS);
+    computeCostParallel(data, clusterCentroids, clusterAssignments, currCost, M, N, K, NUM_THREADS);
 
-    totalAssignmentsTime += (t1 - t0);
-    totalCentroidsTime += (t2 - t1);
-    totalCostTime += (t3 - t2);
     iter++;
   }
 
-  double totalLoopTime = totalAssignmentsTime + totalCentroidsTime + totalCostTime;
-  printf("\n=== Serial K-Means Profiling Breakdown (%d iterations) ===\n", iter);
-  printf("  computeAssignments: %.3f s (%.1f%%)\n", totalAssignmentsTime, (totalAssignmentsTime / totalLoopTime) * 100.0);
-  printf("  computeCentroids  : %.3f s (%.1f%%)\n", totalCentroidsTime, (totalCentroidsTime / totalLoopTime) * 100.0);
-  printf("  computeCost       : %.3f s (%.1f%%)\n", totalCostTime, (totalCostTime / totalLoopTime) * 100.0);
-  printf("  Hotspot fraction f (computeAssignments): %.4f\n", totalAssignmentsTime / totalLoopTime);
-  printf("=========================================================\n\n");
+  printf("K-Means converged in %d iterations using %d threads.\n", iter, NUM_THREADS);
 
   delete[] currCost;
   delete[] prevCost;
