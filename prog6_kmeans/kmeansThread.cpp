@@ -129,7 +129,7 @@ void kMeansThread(double *data, double *clusterCentroids, int *clusterAssignment
     double t1 = CycleTimer::currentSeconds();
     computeCentroids(&args);
     double t2 = CycleTimer::currentSeconds();
-    // Attempted parallelizing computeCost with threads\n    computeCost(&args);
+    computeCost(&args);
     double t3 = CycleTimer::currentSeconds();
 
     totalAssignmentsTime += (t1 - t0);
